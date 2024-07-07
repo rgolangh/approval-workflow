@@ -1,0 +1,58 @@
+id: approval 
+version: "1.0"
+specVersion: 0.8.0
+name: Generic Approval 
+description: A generel purpose approval workflow
+start: ReceiveAskApproval
+events:
+  - name: AskApproval
+    source: askApproval
+    type: askApproval
+    kind: consumed
+
+  - name: Approved
+    source: approved
+    type: approved 
+    kind: consumed
+
+  - name: AskApproved
+    source: askApproved
+    type: askApproved 
+    kind: produced 
+
+functions:
+ - name: jiraApproval
+   operation: "camel:direct:jiraApproval"
+   type: custom
+
+states:
+
+- name: ReceiveAskApproval
+  type: event
+  onEvents:
+    - eventRefs:
+        - AskApproval
+  transition: StartApproval
+
+- name: StartApproval
+  type: operation
+  actions:
+    - name: jiraApproval 
+      functionRef:
+        refName: jiraApproval
+        arguments:
+          body:
+            jiraIssue: kan-123
+            requester: the askapprovwal event source
+            description: asking to do this and that - take it from the askapproval event
+
+  transition: WaitForApproval
+
+- name: WaitForApproval
+  type: event
+  onEvents:
+    - eventRefs:
+        - Approved
+  end:
+    produceEvents:
+      - eventRef: AskApproved
